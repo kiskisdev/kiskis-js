@@ -14,10 +14,11 @@ import { KiskisConfig } from './config.js';
 export { KiskisConfig } from './config.js';
 export { verifyAndParse } from './signed-config.js';
 
-// The KisKis config-signing Ed25519 public key (32 raw bytes, base64). Placeholder until
-// the CDN materialization ships — wired to the real /kiskis/prod/response-signing-key
-// public half in the next slice. Callers can override via `publicKey` for testing.
-const DEFAULT_PUBLIC_KEY_B64 = '';
+// The KisKis config-signing Ed25519 public key (32 raw bytes, base64). This is the public
+// half of /kiskis/prod/response-signing-key — the same key the iOS SDK pins and the
+// management Lambda signs materialized config with. Callers can override via `publicKey`
+// for testing against a locally-generated keypair.
+const DEFAULT_PUBLIC_KEY_B64 = 'LNhWnM1urrQcPFe4Xu/woTDu8O3sAmhtq4vEl+a6da8=';
 
 const DEFAULT_CDN_BASE = 'https://cfg.kiskis.dev';
 const DEFAULT_POLL_MS = 45_000;
@@ -58,7 +59,7 @@ export class KiskisBrowser {
     const env = opts.env ?? 'production';
     const base = (opts.cdnBase ?? DEFAULT_CDN_BASE).replace(/\/+$/, '');
     this.url = `${base}/${encodeURIComponent(opts.appId)}/${env}/${encodeURIComponent(key)}.json`;
-    this.publicKey = opts.publicKey ?? base64ToBytes(DEFAULT_PUBLIC_KEY_B64 || 'AA==');
+    this.publicKey = opts.publicKey ?? base64ToBytes(DEFAULT_PUBLIC_KEY_B64);
     this.pollMs = opts.pollIntervalMs ?? DEFAULT_POLL_MS;
   }
 
