@@ -24,7 +24,7 @@ kiskis.startPolling((config) => {
 ## API
 
 - `new KiskisBrowser({ appId, key?, env?, cdnBase?, publicKey?, pollIntervalMs? })`
-- `fetchConfig(): Promise<KiskisConfig>` — fetch + verify (ETag/304-aware).
+- `fetchConfig(): Promise<KiskisConfig>` — fetch + verify (revalidates via the browser cache, so unchanged config is a cheap 304 on the wire).
 - `startPolling(onChange, onError?): () => void` — poll; fires `onChange` only on change.
 - `config.bool(path, fallback=false)` / `.string(path)` / `.int(path)` / `.raw()`
 

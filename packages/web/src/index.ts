@@ -49,7 +49,7 @@ export class KiskisBrowser {
   private readonly url: string;
   private readonly publicKey: Uint8Array;
   private readonly pollMs: number;
-  private etag: string | null = null;
+  private lastRaw: string | null = null;
   private current: KiskisConfig | null = null;
   private timer: ReturnType<typeof setInterval> | null = null;
 
@@ -69,34 +69,35 @@ export class KiskisBrowser {
   }
 
   /**
-   * Fetch and verify the latest config. Sends If-None-Match so an unchanged config is a
-   * cheap 304 from the CDN edge (no origin hit). Returns the current config on 304.
+   * Fetch and verify the latest config.
+   * Why no manual If-None-Match: a hand-set conditional header is not CORS-safelisted, so
+   * it forces an OPTIONS preflight the CDN rejects (GET/HEAD only) — and ETag isn't in
+   * Access-Control-Expose-Headers anyway. `cache: 'no-cache'` makes the BROWSER revalidate
+   * with its own internal conditional (no preflight), so the wire still gets 304s; change
+   * detection compares document bytes instead. Skips re-verifying an unchanged document.
    */
   async fetchConfig(): Promise<KiskisConfig> {
-    const headers: Record<string, string> = {};
-    if (this.etag) headers['If-None-Match'] = this.etag;
-
-    const res = await fetch(this.url, { headers, cache: 'no-cache' });
-    if (res.status === 304 && this.current) return this.current;
+    const res = await fetch(this.url, { cache: 'no-cache' });
     if (!res.ok) throw new Error(`KisKis: config fetch failed (HTTP ${res.status})`);
 
     const raw = await res.text();
+    if (raw === this.lastRaw && this.current) return this.current;
     const data = await verifyAndParse(raw, this.publicKey);
-    this.etag = res.headers.get('ETag');
+    this.lastRaw = raw;
     this.current = new KiskisConfig(data);
     return this.current;
   }
 
   /**
-   * Start polling. Calls `onChange` with a fresh config only when the ETag changes.
+   * Start polling. Calls `onChange` with a fresh config only when the document changes.
    * Returns a stop function.
    */
   startPolling(onChange: (config: KiskisConfig) => void, onError?: (err: unknown) => void): () => void {
     const tick = async () => {
-      const before = this.etag;
+      const before = this.lastRaw;
       try {
         const cfg = await this.fetchConfig();
-        if (this.etag !== before) onChange(cfg);
+        if (this.lastRaw !== before) onChange(cfg);
       } catch (err) {
         onError?.(err);
       }

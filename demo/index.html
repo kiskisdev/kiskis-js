@@ -29,41 +29,43 @@
 </head>
 <body>
   <h1>@kiskis/web — live config demo</h1>
-  <p>The SDK fetched a <strong>signed</strong> config document, verified its Ed25519 signature,
-     and read these flags. No secret, no auth, no Lambda — just a public, tamper-proof read.</p>
+  <p>The SDK fetched a <strong>signed</strong> config document from the production KisKis CDN,
+     verified its Ed25519 signature, and read these flags. No secret, no auth, no Lambda —
+     just a public, tamper-proof read.</p>
 
   <div id="out">Loading…</div>
 
   <p style="color:#888;font-size:13px;margin-top:24px">
-    Reading <code>./public/demo/production/default.json</code> (a locally-signed stand-in for
-    <code>cfg.kiskis.dev/&lt;appId&gt;/&lt;env&gt;/&lt;key&gt;.json</code>). Regenerate it with
-    <code>node demo/generate-fixture.mjs</code>.
+    Reading <code id="url-label">cfg.kiskis.dev/…/production/flags.json</code> — published with
+    <code>kiskis upload --browser-safe</code>, materialized and signed by the KisKis backend.
+    Config changes go live within ~15 seconds.
   </p>
 
   <script type="module">
     import { KiskisBrowser } from '@kiskis/web';
 
-    // The demo's public key (printed by generate-fixture.mjs). In production this is the
-    // KisKis signing key bundled into the SDK.
-    const DEMO_PUBLIC_KEY_B64 = 'nKDahnJtgoLOTgcZ320fTbKQK9/nhjKsSJDQuajjjic=';
-    const bytes = Uint8Array.from(atob(DEMO_PUBLIC_KEY_B64), c => c.charCodeAt(0));
+    // The KisKis demo app's public appId (an opaque hash — safe to embed anywhere).
+    const DEMO_APP_ID = '69dd5c9028eaa165ef08fe69ebc3fdd7701d8c6e9bee765b065c2c56a42ca8e1';
 
-    const kiskis = new KiskisBrowser({
-      appId: 'demo',
-      cdnBase: './public',       // static stand-in for the CDN
-      publicKey: bytes,
-    });
+    // No publicKey override: the SDK verifies with its bundled production signing key.
+    // 15s poll (default 45s) so live config changes are quick to see in a demo.
+    const kiskis = new KiskisBrowser({ appId: DEMO_APP_ID, key: 'flags', pollIntervalMs: 15_000 });
 
     const out = document.getElementById('out');
-    try {
-      const cfg = await kiskis.fetchConfig();
+    const render = (cfg) => {
       const flag = (name) => {
-        const on = cfg.bool(`flags.${name}`);
-        return `<div class="row"><span><code>flags.${name}</code></span><span class="${on ? 'on' : 'off'}">${on ? '✓ ON' : 'off'}</span></div>`;
+        const on = cfg.bool(`features.${name}`);
+        return `<div class="row"><span><code>features.${name}</code></span><span class="${on ? 'on' : 'off'}">${on ? '✓ ON' : 'off'}</span></div>`;
       };
       out.innerHTML =
-        flag('dark_mode') + flag('beta_banner') +
-        `<div class="banner">${cfg.string('copy.headline') ?? ''}</div>`;
+        flag('dark_mode') + flag('beta_banner') + flag('new_checkout') +
+        `<div class="banner">${cfg.string('ui.welcome_message') ?? ''}</div>`;
+    };
+
+    try {
+      render(await kiskis.fetchConfig());
+      // Live updates: re-render only when the config actually changes on the CDN.
+      kiskis.startPolling(render, (e) => console.warn('poll error:', e.message));
     } catch (e) {
       out.innerHTML = `<p class="err">Verification failed: ${e.message}</p>`;
     }

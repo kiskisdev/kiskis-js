@@ -32,16 +32,18 @@ npm run typecheck
 
 ```bash
 npm run build
-node demo/generate-fixture.mjs        # writes a locally-signed config fixture
 python3 -m http.server 8099           # or any static server
 open http://localhost:8099/demo/index.html
 ```
 
-The demo reads a **signed** config document, verifies its Ed25519 signature in the browser,
-and renders the flags — a local stand-in for `cfg.kiskis.dev/<appId>/<env>/<key>.json`.
+The demo reads the KisKis demo app's **live** signed config from
+`cfg.kiskis.dev/<appId>/production/flags.json`, verifies its Ed25519 signature in the
+browser, and renders the flags — then polls, re-rendering when the config changes on the
+CDN (publish with `kiskis upload --browser-safe`; changes go live in ~15s).
+`demo/generate-fixture.mjs` still generates a locally-signed fixture for offline work.
 
 ## Status
 
-Early. `@kiskis/web` reads and verifies signed config today; the CDN materialization that
-publishes those documents (and the `@kiskis/node` package, sessions, and proxy) are the
-next slices. See `DESIGN-web-sdk.md` in the service repo for the full plan.
+Early. `@kiskis/web` reads and verifies live signed config from the production CDN today.
+The `@kiskis/node` package, sessions, and proxy are the next slices. See
+`DESIGN-web-sdk.md` in the service repo for the full plan.
