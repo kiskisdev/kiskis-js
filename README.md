@@ -5,7 +5,7 @@ JavaScript/TypeScript SDKs for [KisKis](https://kiskis.dev). Monorepo (npm works
 | Package | Runtime | Gets |
 |---|---|---|
 | [`@kiskis/web`](packages/web) | the browser | feature flags + remote config (public, signature-verified). **Never secrets.** |
-| `@kiskis/node` *(planned)* | your trusted server / serverless | real secrets, ZK mode — full parity with the iOS SDK |
+| [`@kiskis/node`](packages/node) | your trusted server / serverless | config + ZK decryption via a read-only service token, signed-response verification, cache + staleness policies |
 
 ## Why two packages
 
@@ -44,6 +44,7 @@ CDN (publish with `kiskis upload --browser-safe`; changes go live in ~15s).
 
 ## Status
 
-Early. `@kiskis/web` reads and verifies live signed config from the production CDN today.
-The `@kiskis/node` package, sessions, and proxy are the next slices. See
+Early. `@kiskis/web` reads and verifies live signed config from the production CDN;
+`@kiskis/node` fetches config (plain or Zero-Knowledge) from the production API with a
+read-only service token. Sessions and the proxy are the next slices. See
 `DESIGN-web-sdk.md` in the service repo for the full plan.
