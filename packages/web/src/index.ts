@@ -10,9 +10,11 @@
 
 import { verifyAndParse } from './signed-config.js';
 import { KiskisConfig } from './config.js';
+import { startSession, type WebSession } from './session.js';
 
 export { KiskisConfig } from './config.js';
 export { verifyAndParse } from './signed-config.js';
+export { startSession, getOrCreateClientId, type WebSession } from './session.js';
 
 // The KisKis config-signing Ed25519 public key (32 raw bytes, base64). This is the public
 // half of /kiskis/prod/response-signing-key — the same key the iOS SDK pins and the
@@ -36,6 +38,10 @@ export interface KiskisBrowserOptions {
   publicKey?: Uint8Array;
   /** Poll interval in ms (default 45000). */
   pollIntervalMs?: number;
+  /** Publishable key (kk_pub_…) — enables session() for MAU + the proxy tier. */
+  publishableKey?: string;
+  /** API base for session minting (default https://api.kiskis.dev). */
+  apiBase?: string;
 }
 
 function base64ToBytes(b64: string): Uint8Array {
@@ -49,9 +55,12 @@ export class KiskisBrowser {
   private readonly url: string;
   private readonly publicKey: Uint8Array;
   private readonly pollMs: number;
+  private readonly publishableKey?: string;
+  private readonly apiBase?: string;
   private lastRaw: string | null = null;
   private current: KiskisConfig | null = null;
   private timer: ReturnType<typeof setInterval> | null = null;
+  private currentSession: WebSession | null = null;
 
   constructor(opts: KiskisBrowserOptions) {
     if (!opts.appId) throw new Error('KisKis: appId is required');
@@ -61,11 +70,34 @@ export class KiskisBrowser {
     this.url = `${base}/${encodeURIComponent(opts.appId)}/${env}/${encodeURIComponent(key)}.json`;
     this.publicKey = opts.publicKey ?? base64ToBytes(DEFAULT_PUBLIC_KEY_B64);
     this.pollMs = opts.pollIntervalMs ?? DEFAULT_POLL_MS;
+    this.publishableKey = opts.publishableKey;
+    this.apiBase = opts.apiBase;
   }
 
   /** The most recently fetched config, or null before the first fetch. */
   get config(): KiskisConfig | null {
     return this.current;
+  }
+
+  /**
+   * Mint (or return the cached) web session. Requires the `publishableKey` option.
+   * Renews automatically when within a minute of expiry. The session counts toward
+   * MAU and will authenticate proxy calls.
+   */
+  async session(): Promise<WebSession> {
+    if (!this.publishableKey) {
+      throw new Error('KisKis: pass `publishableKey` to use sessions');
+    }
+    const nowSec = Math.floor(Date.now() / 1000);
+    if (this.currentSession && this.currentSession.expiresAt - nowSec > 60) {
+      return this.currentSession;
+    }
+    this.currentSession = await startSession({
+      publishableKey: this.publishableKey,
+      apiBase: this.apiBase,
+      publicKey: this.publicKey,
+    });
+    return this.currentSession;
   }
 
   /**

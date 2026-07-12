@@ -21,9 +21,23 @@ kiskis.startPolling((config) => {
 });
 ```
 
+## Sessions
+
+Pass your publishable key (dashboard → Web Apps) to mint a session — the server checks
+that your page's Origin is registered for the app and matches the key's environment:
+
+```ts
+const kiskis = new KiskisBrowser({ appId, key: 'flags', publishableKey: 'kk_pub_live_…' });
+const session = await kiskis.session(); // signed token, auto-renewed near expiry
+```
+
+Publishable keys are public identifiers (safe in your bundle). Sessions count toward
+MAU and will authenticate KisKis Proxy calls.
+
 ## API
 
-- `new KiskisBrowser({ appId, key?, env?, cdnBase?, publicKey?, pollIntervalMs? })`
+- `new KiskisBrowser({ appId, key?, env?, cdnBase?, publicKey?, pollIntervalMs?, publishableKey?, apiBase? })`
+- `session(): Promise<WebSession>` — mint/reuse an Origin-checked session.
 - `fetchConfig(): Promise<KiskisConfig>` — fetch + verify (revalidates via the browser cache, so unchanged config is a cheap 304 on the wire).
 - `startPolling(onChange, onError?): () => void` — poll; fires `onChange` only on change.
 - `config.bool(path, fallback=false)` / `.string(path)` / `.int(path)` / `.raw()`
