@@ -1,0 +1,6 @@
+{
+  "payload": "{\"flags\":{\"dark_mode\":true,\"beta_banner\":false},\"copy\":{\"headline\":\"Shipped from KisKis — no rebuild, no redeploy.\"}}",
+  "sig": "bf7TiL22Xx+veV7dQNwGol6ZeeQlBKtuHjJn5Gb+F2GLymZLvue+0FGF0r2AfxGwjg4E1iw1Sxa8Z5JlZ/iHCw==",
+  "alg": "ed25519",
+  "signedAt": "1970-01-01T00:00:00.000Z"
+}

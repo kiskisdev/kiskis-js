@@ -1,0 +1,14 @@
+{
+  "name": "kiskis-js",
+  "private": true,
+  "description": "KisKis JavaScript SDKs — @kiskis/web (browser) and @kiskis/node (server).",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  },
+  "license": "MIT"
+}

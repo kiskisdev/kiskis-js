@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>@kiskis/web demo</title>
+  <style>
+    body { font-family: -apple-system, system-ui, sans-serif; max-width: 640px; margin: 40px auto; padding: 0 20px; line-height: 1.5; }
+    h1 { font-size: 20px; }
+    .row { display: flex; justify-content: space-between; padding: 10px 14px; border: 1px solid #ddd; border-radius: 8px; margin: 8px 0; }
+    .on { color: #1a7f37; font-weight: 600; }
+    .off { color: #999; }
+    .banner { padding: 14px; border-radius: 8px; background: #eef4ff; border: 1px solid #cddcff; margin: 16px 0; }
+    code { background: #f2f2f2; padding: 1px 5px; border-radius: 4px; font-size: 13px; }
+    .err { color: #c0392b; }
+    @media (prefers-color-scheme: dark) {
+      body { background: #111; color: #eee; } .row { border-color: #333; } code { background: #222; }
+      .banner { background: #14243f; border-color: #27407a; } }
+  </style>
+  <!-- Load the actual built SDK; @noble resolves from a CDN via the import map. -->
+  <script type="importmap">
+    {
+      "imports": {
+        "@noble/ed25519": "https://esm.sh/@noble/ed25519@2",
+        "@kiskis/web": "../packages/web/dist/index.js"
+      }
+    }
+  </script>
+</head>
+<body>
+  <h1>@kiskis/web — live config demo</h1>
+  <p>The SDK fetched a <strong>signed</strong> config document, verified its Ed25519 signature,
+     and read these flags. No secret, no auth, no Lambda — just a public, tamper-proof read.</p>
+
+  <div id="out">Loading…</div>
+
+  <p style="color:#888;font-size:13px;margin-top:24px">
+    Reading <code>./public/demo/production/default.json</code> (a locally-signed stand-in for
+    <code>cfg.kiskis.dev/&lt;appId&gt;/&lt;env&gt;/&lt;key&gt;.json</code>). Regenerate it with
+    <code>node demo/generate-fixture.mjs</code>.
+  </p>
+
+  <script type="module">
+    import { KiskisBrowser } from '@kiskis/web';
+
+    // The demo's public key (printed by generate-fixture.mjs). In production this is the
+    // KisKis signing key bundled into the SDK.
+    const DEMO_PUBLIC_KEY_B64 = 'nKDahnJtgoLOTgcZ320fTbKQK9/nhjKsSJDQuajjjic=';
+    const bytes = Uint8Array.from(atob(DEMO_PUBLIC_KEY_B64), c => c.charCodeAt(0));
+
+    const kiskis = new KiskisBrowser({
+      appId: 'demo',
+      cdnBase: './public',       // static stand-in for the CDN
+      publicKey: bytes,
+    });
+
+    const out = document.getElementById('out');
+    try {
+      const cfg = await kiskis.fetchConfig();
+      const flag = (name) => {
+        const on = cfg.bool(`flags.${name}`);
+        return `<div class="row"><span><code>flags.${name}</code></span><span class="${on ? 'on' : 'off'}">${on ? '✓ ON' : 'off'}</span></div>`;
+      };
+      out.innerHTML =
+        flag('dark_mode') + flag('beta_banner') +
+        `<div class="banner">${cfg.string('copy.headline') ?? ''}</div>`;
+    } catch (e) {
+      out.innerHTML = `<p class="err">Verification failed: ${e.message}</p>`;
+    }
+  </script>
+</body>
+</html>
